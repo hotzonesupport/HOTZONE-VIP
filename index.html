@@ -330,7 +330,7 @@ let activePeriod = 'month-' + new Date().getFullYear() + '-' + String(new Date()
 function openSheet(){ backdrop.classList.add('open'); sheet.classList.add('open'); formStatus.textContent=''; }
 function closeSheet(){ backdrop.classList.remove('open'); sheet.classList.remove('open'); }
 fab.onclick = openSheet;
-cancelBtn.onclick = closeSheet;
+cancelBtn.onclick = () => { resetForm(); closeSheet(); };
 backdrop.onclick = closeSheet;
 
 document.querySelectorAll('#resultFilters .chip').forEach(chip=>{
@@ -569,9 +569,22 @@ saveBtn.onclick = async () => {
   formStatus.textContent = 'Saving…';
   const { error } = await sb.from('bets').insert([row]);
   if (error) { formStatus.textContent = 'Save failed: ' + error.message; return; }
+  resetForm();
   closeSheet();
   loadBets();
 };
+
+function resetForm(){
+  document.getElementById('pin').value = '';
+  document.getElementById('f_date').value = '';
+  document.getElementById('f_odds').value = '';
+  document.getElementById('f_league').value = '';
+  document.getElementById('f_match').value = '';
+  document.getElementById('f_market').value = '';
+  document.getElementById('f_market_type').value = '1H Goals';
+  document.getElementById('f_stake').value = '100';
+  document.getElementById('f_result').value = 'Pending';
+}
 
 loadBets();
 </script>
