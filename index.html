@@ -245,6 +245,21 @@
 
 <button class="fab" id="fabAdd">+</button>
 
+<div class="sheet-backdrop" id="editBackdrop"></div>
+<div class="sheet" id="editSheet">
+  <h3>Update bet</h3>
+  <div class="field-row" style="flex-wrap:wrap;">
+    <button class="btn" style="background:rgba(94,106,121,0.18);color:var(--pending);flex:1 1 45%;" data-result="Pending">Pending</button>
+    <button class="btn" style="background:rgba(63,169,106,0.18);color:var(--win);flex:1 1 45%;" data-result="Win">Win</button>
+    <button class="btn" style="background:rgba(214,90,90,0.18);color:var(--loss);flex:1 1 45%;" data-result="Loss">Loss</button>
+    <button class="btn" style="background:rgba(139,149,163,0.18);color:var(--void);flex:1 1 45%;" data-result="Void">Void</button>
+  </div>
+  <div class="sheet-actions" style="margin-top:14px;">
+    <button class="btn btn-secondary" id="editCancelBtn">Cancel</button>
+    <button class="btn" style="background:var(--loss);color:#fff;" id="deleteBetBtn">Delete bet</button>
+  </div>
+</div>
+
 <div class="sheet-backdrop" id="backdrop"></div>
 <div class="sheet" id="sheet">
   <h3>Add a bet</h3>
@@ -317,6 +332,11 @@ const formStatus = document.getElementById('formStatus');
 const leagueFilter = document.getElementById('leagueFilter');
 const periodSelect = document.getElementById('periodSelect');
 const marketFiltersEl = document.getElementById('marketFilters');
+const editBackdrop = document.getElementById('editBackdrop');
+const editSheet = document.getElementById('editSheet');
+const editCancelBtn = document.getElementById('editCancelBtn');
+const deleteBetBtn = document.getElementById('deleteBetBtn');
+let editingBetId = null;
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MARKET_TYPE_LABELS = {'1H Goals':'1st Half Goals','1H Corners':'1st Half Corners','FT Goals':'Full Match Goals','FT Corners':'Full Match Corners','Other':'Other'};
@@ -532,7 +552,7 @@ function renderList(){
     </div>`).join('');
 
   document.querySelectorAll('.badge').forEach(btn=>{
-    btn.onclick = () => cycleResult(btn.dataset.id, btn.dataset.cur);
+    btn.onclick = () => openResultPicker(btn.dataset.id);
   });
 }
 
@@ -542,15 +562,44 @@ function fmtDate(d){
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-const ORDER = ['Pending','Win','Loss','Void'];
-async function cycleResult(id, cur){
-  const pin = prompt('Admin PIN to change result:');
-  if (pin !== ADMIN_PIN) { alert('Wrong PIN'); return; }
-  const next = ORDER[(ORDER.indexOf(cur)+1) % ORDER.length];
-  const { error } = await sb.from('bets').update({ result: next }).eq('id', id);
-  if (error) { alert('Failed to update: ' + error.message); return; }
-  loadBets();
+function openEditSheet(id){
+  editingBetId = id;
+  editBackdrop.classList.add('open');
+  editSheet.classList.add('open');
 }
+function closeEditSheet(){
+  editingBetId = null;
+  editBackdrop.classList.remove('open');
+  editSheet.classList.remove('open');
+}
+editCancelBtn.onclick = closeEditSheet;
+editBackdrop.onclick = closeEditSheet;
+
+async function openResultPicker(id){
+  const pin = prompt('Admin PIN to edit this bet:');
+  if (pin !== ADMIN_PIN) { if (pin !== null) alert('Wrong PIN'); return; }
+  openEditSheet(id);
+}
+
+editSheet.querySelectorAll('[data-result]').forEach(btn=>{
+  btn.onclick = async () => {
+    if (!editingBetId) return;
+    const { error } = await sb.from('bets').update({ result: btn.dataset.result }).eq('id', editingBetId);
+    closeEditSheet();
+    if (error) { alert('Failed to update: ' + error.message); return; }
+    loadBets();
+  };
+});
+
+deleteBetBtn.onclick = async () => {
+  if (!editingBetId) return;
+  if (!confirm('Delete this bet? This cannot be undone.')) return;
+  const id = editingBetId;
+  const { error } = await sb.from('bets').delete().eq('id', id);
+  closeEditSheet();
+  if (error) { alert('Failed to delete: ' + error.message); return; }
+  loadBets();
+};
 
 saveBtn.onclick = async () => {
   const pin = document.getElementById('pin').value;
