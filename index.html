@@ -10,28 +10,50 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#10141A; --bg-raised:#171D26; --line:#2A323D;
-    --gold:#E3A23C; --gold-dim:#8C6A2E;
+    --bg:#0B0E13; --bg-raised:#161C26; --line:#293040;
+    --gold:#3D6FE0; --gold-dim:#16264F;
     --win:#3FA96A; --loss:#D65A5A; --void:#8B95A3; --pending:#5E6A79;
-    --text:#EDEFF2; --text-dim:#939CA8;
+    --text:#EDEFF2; --text-dim:#8D97A6;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Work Sans',sans-serif;-webkit-font-smoothing:antialiased;color-scheme:dark;}
+  body{
+    background:
+      radial-gradient(circle at 15% 0%, rgba(61,111,224,0.10), transparent 45%),
+      radial-gradient(circle at 85% 100%, rgba(61,111,224,0.06), transparent 40%),
+      var(--bg);
+    min-height:100vh;
+  }
   .wrap{max-width:520px;margin:0 auto;padding:0 0 100px;
         padding-top:env(safe-area-inset-top);
         padding-bottom:calc(100px + env(safe-area-inset-bottom));}
-  .topbar{display:flex;align-items:center;gap:10px;padding:18px 20px 12px;}
-  .mark{width:34px;height:34px;border-radius:50%;background:linear-gradient(145deg,var(--gold),var(--gold-dim));
-        display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;overflow:hidden;}
+
+  /* ---- top bar ---- */
+  .topbar{
+    position:sticky;top:0;z-index:15;
+    display:flex;align-items:center;gap:12px;
+    padding:16px 20px;
+    background:rgba(11,14,19,0.72);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  .mark{width:44px;height:44px;border-radius:50%;background:linear-gradient(145deg,var(--gold),var(--gold-dim));
+        display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;
+        box-shadow:0 0 0 1px rgba(255,255,255,0.06), 0 4px 14px rgba(61,111,224,0.25);}
   .mark img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-  .brand{font-family:'Oswald',sans-serif;font-weight:600;font-size:19px;letter-spacing:0.5px;}
+  .brand{font-family:'Oswald',sans-serif;font-weight:600;font-size:20px;letter-spacing:0.3px;line-height:1.1;}
   .brand span{color:var(--gold);}
-  .sub{font-size:12px;color:var(--text-dim);margin-top:1px;}
+  .sub{font-size:11.5px;color:var(--text-dim);margin-top:3px;display:flex;align-items:center;gap:6px;}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--win);display:inline-block;flex-shrink:0;}
+
+  .content{padding-top:18px;}
 
   .period-select{margin:0 20px 14px;}
   .period-select select{width:100%;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;
         padding:10px 12px;color:var(--text);font-family:'Oswald',sans-serif;font-size:14px;font-weight:500;
         -webkit-appearance:none;appearance:none;}
+
+  .dash-row{display:block;}
 
   .hero{margin:0 20px 16px;background:var(--bg-raised);border:1px solid var(--line);border-radius:14px;padding:26px 22px 20px;position:relative;overflow:hidden;}
   .hero::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
@@ -64,7 +86,7 @@
   .filters::-webkit-scrollbar{display:none;}
   .chip{flex-shrink:0;font-family:'Oswald',sans-serif;font-size:12.5px;font-weight:500;padding:7px 14px;border-radius:20px;
         border:1px solid var(--line);background:var(--bg-raised);color:var(--text-dim);cursor:pointer;white-space:nowrap;}
-  .chip.active{background:var(--gold);border-color:var(--gold);color:#10141A;}
+  .chip.active{background:var(--gold);border-color:var(--gold);color:#F4F7FF;}
   .league-select{margin:0 20px 4px;}
   .league-select select{width:100%;background:var(--bg-raised);border:1px solid var(--line);border-radius:9px;
         padding:9px 12px;color:var(--text);font-size:13px;font-family:'Work Sans',sans-serif;}
@@ -72,6 +94,7 @@
   .section-title{font-family:'Oswald',sans-serif;font-size:14px;letter-spacing:0.3px;color:var(--text);margin:18px 20px 10px;display:flex;align-items:center;gap:8px;}
   .section-title::after{content:"";flex:1;height:1px;background:var(--line);}
 
+  #ticketList{padding:0;}
   .ticket{margin:0 20px 12px;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
   .ticket-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;}
   .ticket-date{font-size:11px;color:var(--gold);font-weight:600;letter-spacing:0.3px;}
@@ -93,15 +116,16 @@
   .footer{margin:26px 20px 0;font-size:11.5px;color:var(--text-dim);text-align:center;line-height:1.6;}
 
   .fab{position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;
-       background:linear-gradient(145deg,var(--gold),var(--gold-dim));border:none;box-shadow:0 6px 18px rgba(0,0,0,0.4);
-       font-size:26px;color:#10141A;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+       background:linear-gradient(145deg,var(--gold),var(--gold-dim));border:none;box-shadow:0 6px 18px rgba(0,0,0,0.5);
+       font-size:26px;color:#F4F7FF;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .fab:active{transform:scale(0.94);}
 
   .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;z-index:20;}
   .sheet-backdrop.open{display:block;}
   .sheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg-raised);border-top:1px solid var(--line);
          border-radius:16px 16px 0 0;padding:18px 20px calc(20px + env(safe-area-inset-bottom));z-index:21;
-         transform:translateY(100%);transition:transform .22s ease;max-height:85vh;overflow-y:auto;}
+         transform:translateY(100%);transition:transform .22s ease;max-height:85vh;overflow-y:auto;
+         max-width:520px;margin:0 auto;left:0;right:0;}
   .sheet.open{transform:translateY(0);}
   .sheet h3{font-family:'Oswald',sans-serif;font-size:17px;margin:2px 0 14px;}
   .field{margin-bottom:12px;min-width:0;}
@@ -114,9 +138,32 @@
   .field-row .field{flex:1 1 0;width:0;}
   .sheet-actions{display:flex;gap:10px;margin-top:6px;}
   .btn{flex:1;padding:12px;border-radius:9px;border:none;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
-  .btn-primary{background:var(--gold);color:#10141A;}
+  .btn-primary{background:var(--gold);color:#F4F7FF;}
   .btn-secondary{background:transparent;border:1px solid var(--line);color:var(--text-dim);}
   .status{font-size:12px;color:var(--text-dim);text-align:center;margin-top:10px;min-height:16px;}
+
+  /* ---- desktop / wide viewport ---- */
+  @media (min-width: 760px){
+    .wrap{max-width:920px;}
+    .topbar{padding:18px 32px;}
+    .mark{width:56px;height:56px;font-size:24px;}
+    .brand{font-size:23px;}
+    .content{padding-top:24px;}
+    .period-select{margin:0 32px 18px;max-width:320px;}
+    .dash-row{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;align-items:stretch;margin:0 32px 16px;}
+    .dash-row .hero,.dash-row .chart-card{margin:0;}
+    .meta-row{margin:0 32px 14px;}
+    .filters{margin:0 32px 14px;}
+    .league-select{margin:0 32px 4px;max-width:280px;}
+    .section-title{margin:20px 32px 12px;}
+    #ticketList{display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:14px;padding:0 32px;}
+    .ticket{margin:0;}
+    .empty{margin:0 32px;}
+    .footer{margin:30px 32px 0;}
+  }
+  @media (min-width: 1080px){
+    .wrap{max-width:1080px;}
+  }
 </style>
 </head>
 <body>
@@ -125,54 +172,58 @@
     <div class="mark" id="logoMark">⚽</div>
     <div>
       <div class="brand">HOT <span>ZONE</span> VIP</div>
-      <div class="sub" id="subLabel">Loading…</div>
+      <div class="sub"><span class="live-dot"></span><span id="subLabel">Loading…</span></div>
     </div>
   </div>
 
-  <div class="period-select">
-    <select id="periodSelect"></select>
-  </div>
+  <div class="content">
+    <div class="period-select">
+      <select id="periodSelect"></select>
+    </div>
 
-  <div class="hero">
-    <div class="hero-top">
-      <div>
-        <div class="hero-label">Net result</div>
-        <div class="hero-number flat" id="netUnits">0.00U</div>
-        <div class="hero-sub" id="netSub">No bets settled yet</div>
+    <div class="dash-row">
+      <div class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="hero-label">Net result</div>
+            <div class="hero-number flat" id="netUnits">0.00U</div>
+            <div class="hero-sub" id="netSub">No bets settled yet</div>
+          </div>
+          <div class="streak">
+            <div class="streak-badge flat" id="streakBadge">—</div>
+            <div class="streak-lbl">Current streak</div>
+          </div>
+        </div>
+        <div class="record">
+          <div class="record-item"><div class="record-num win" id="cWin">0</div><div class="record-lbl">Wins</div></div>
+          <div class="record-item"><div class="record-num loss" id="cLoss">0</div><div class="record-lbl">Losses</div></div>
+          <div class="record-item"><div class="record-num void" id="cVoid">0</div><div class="record-lbl">Void</div></div>
+          <div class="record-item"><div class="record-num pending" id="cPending">0</div><div class="record-lbl">Pending</div></div>
+        </div>
       </div>
-      <div class="streak">
-        <div class="streak-badge flat" id="streakBadge">—</div>
-        <div class="streak-lbl">Current streak</div>
+
+      <div class="chart-card">
+        <div class="chart-title">Units over time</div>
+        <div id="chartWrap"><div class="chart-empty">Chart appears once bets are settled</div></div>
       </div>
     </div>
-    <div class="record">
-      <div class="record-item"><div class="record-num win" id="cWin">0</div><div class="record-lbl">Wins</div></div>
-      <div class="record-item"><div class="record-num loss" id="cLoss">0</div><div class="record-lbl">Losses</div></div>
-      <div class="record-item"><div class="record-num void" id="cVoid">0</div><div class="record-lbl">Void</div></div>
-      <div class="record-item"><div class="record-num pending" id="cPending">0</div><div class="record-lbl">Pending</div></div>
+
+    <div class="meta-row"><span>Unit = 100€</span><span id="updatedLabel">—</span></div>
+
+    <div class="filters" id="resultFilters">
+      <button class="chip active" data-filter="All">All</button>
+      <button class="chip" data-filter="Win">Win</button>
+      <button class="chip" data-filter="Loss">Loss</button>
+      <button class="chip" data-filter="Void">Void</button>
+      <button class="chip" data-filter="Pending">Pending</button>
     </div>
-  </div>
+    <div class="league-select">
+      <select id="leagueFilter"><option value="All">All leagues</option></select>
+    </div>
 
-  <div class="chart-card">
-    <div class="chart-title">Units over time</div>
-    <div id="chartWrap"><div class="chart-empty">Chart appears once bets are settled</div></div>
+    <div class="section-title">Bet log</div>
+    <div id="ticketList"></div>
   </div>
-
-  <div class="meta-row"><span>Unit = 100€</span><span id="updatedLabel">—</span></div>
-
-  <div class="filters" id="resultFilters">
-    <button class="chip active" data-filter="All">All</button>
-    <button class="chip" data-filter="Win">Win</button>
-    <button class="chip" data-filter="Loss">Loss</button>
-    <button class="chip" data-filter="Void">Void</button>
-    <button class="chip" data-filter="Pending">Pending</button>
-  </div>
-  <div class="league-select">
-    <select id="leagueFilter"><option value="All">All leagues</option></select>
-  </div>
-
-  <div class="section-title">Bet log</div>
-  <div id="ticketList"></div>
 </div>
 
 <button class="fab" id="fabAdd">+</button>
@@ -219,8 +270,8 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) {
   tg.ready(); tg.expand();
-  try { tg.setHeaderColor('#10141A'); } catch(e){}
-  try { tg.setBackgroundColor('#10141A'); } catch(e){}
+  try { tg.setHeaderColor('#0B0E13'); } catch(e){}
+  try { tg.setBackgroundColor('#0B0E13'); } catch(e){}
 }
 
 (function(){
@@ -275,7 +326,7 @@ async function loadBets(){
 function buildPeriodOptions(){
   const now = new Date();
   const curY = now.getFullYear(), curM = now.getMonth()+1;
-  const byYear = {}; // year -> Set of months
+  const byYear = {};
   allBets.forEach(b=>{
     if (!b.date) return;
     const [y,m] = b.date.split('-').map(Number);
@@ -323,7 +374,7 @@ function periodLabel(){
 }
 
 function renderAll(){
-  document.getElementById('subLabel').textContent = periodLabel() + ' bet log & results';
+  document.getElementById('subLabel').textContent = periodLabel() + ' · bet log & results';
   renderSummary();
   renderChart();
   renderLeagueOptions();
@@ -400,7 +451,7 @@ function renderChart(){
   const lastVal = pts[pts.length-1];
   const lineColor = lastVal >= 0 ? '#3FA96A' : '#D65A5A';
   wrap.innerHTML = `<svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w-pad}" y2="${zeroY.toFixed(1)}" stroke="#2A323D" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w-pad}" y2="${zeroY.toFixed(1)}" stroke="#293040" stroke-width="1" stroke-dasharray="3,3"/>
     <path d="${linePath}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 }
