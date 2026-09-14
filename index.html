@@ -548,7 +548,7 @@ async function cycleResult(id, cur){
   if (pin !== ADMIN_PIN) { alert('Wrong PIN'); return; }
   const next = ORDER[(ORDER.indexOf(cur)+1) % ORDER.length];
   const { error } = await sb.from('bets').update({ result: next }).eq('id', id);
-  if (error) { alert('Failed to update'); return; }
+  if (error) { alert('Failed to update: ' + error.message); return; }
   loadBets();
 }
 
@@ -568,7 +568,7 @@ saveBtn.onclick = async () => {
   if (!row.date || !row.match || !row.odds){ formStatus.textContent = 'Fill in date, match and odds'; return; }
   formStatus.textContent = 'Saving…';
   const { error } = await sb.from('bets').insert([row]);
-  if (error) { formStatus.textContent = 'Save failed'; return; }
+  if (error) { formStatus.textContent = 'Save failed: ' + error.message; return; }
   closeSheet();
   loadBets();
 };
