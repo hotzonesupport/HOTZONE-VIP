@@ -88,6 +88,7 @@
   .chip{flex-shrink:0;font-family:'Oswald',sans-serif;font-size:13px;font-weight:500;padding:8px 16px;border-radius:20px;
         border:1px solid var(--line);background:var(--bg-raised);color:var(--text-dim);cursor:pointer;white-space:nowrap;}
   .chip.active{background:var(--gold);border-color:var(--gold);color:#F4F7FF;}
+  .filter-label{font-size:11.5px;color:var(--text-dim);margin:0 0 6px;font-family:'Oswald',sans-serif;letter-spacing:0.2px;}
   .league-select{margin-bottom:6px;}
   .league-select select{width:100%;max-width:300px;background:var(--bg-raised);border:1px solid var(--line);border-radius:9px;
         padding:10px 12px;color:var(--text);font-size:13.5px;font-family:'Work Sans',sans-serif;}
@@ -222,6 +223,17 @@
       <button class="chip" data-filter="Void">Void</button>
       <button class="chip" data-filter="Pending">Pending</button>
     </div>
+
+    <div class="filter-label">Bet type</div>
+    <div class="filters" id="marketFilters">
+      <button class="chip active" data-filter="All">All</button>
+      <button class="chip" data-filter="1H Goals">1st Half Goals</button>
+      <button class="chip" data-filter="1H Corners">1st Half Corners</button>
+      <button class="chip" data-filter="FT Goals">Full Match Goals</button>
+      <button class="chip" data-filter="FT Corners">Full Match Corners</button>
+      <button class="chip" data-filter="Other">Other</button>
+    </div>
+
     <div class="league-select">
       <select id="leagueFilter"><option value="All">All leagues</option></select>
     </div>
@@ -244,6 +256,15 @@
   <div class="field"><label>League</label><input id="f_league" type="text" placeholder="England Premier League"></div>
   <div class="field"><label>Match</label><input id="f_match" type="text" placeholder="Arsenal vs Everton"></div>
   <div class="field"><label>Market</label><input id="f_market" type="text" placeholder="Total Over (10.5) Corners"></div>
+  <div class="field"><label>Bet type</label>
+    <select id="f_market_type">
+      <option value="1H Goals">1st Half Goals</option>
+      <option value="1H Corners">1st Half Corners</option>
+      <option value="FT Goals">Full Match Goals</option>
+      <option value="FT Corners">Full Match Corners</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
   <div class="field-row">
     <div class="field"><label>Unit stake (€)</label><input id="f_stake" type="number" inputmode="numeric" value="100"></div>
     <div class="field"><label>Result</label>
@@ -295,11 +316,14 @@ const saveBtn = document.getElementById('saveBtn');
 const formStatus = document.getElementById('formStatus');
 const leagueFilter = document.getElementById('leagueFilter');
 const periodSelect = document.getElementById('periodSelect');
+const marketFiltersEl = document.getElementById('marketFilters');
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MARKET_TYPE_LABELS = {'1H Goals':'1st Half Goals','1H Corners':'1st Half Corners','FT Goals':'Full Match Goals','FT Corners':'Full Match Corners','Other':'Other'};
 
 let allBets = [];
 let activeResultFilter = 'All';
+let activeMarketFilter = 'All';
 let activeLeagueFilter = 'All';
 let activePeriod = 'month-' + new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0');
 
@@ -315,6 +339,14 @@ document.querySelectorAll('#resultFilters .chip').forEach(chip=>{
     chip.classList.add('active');
     activeResultFilter = chip.dataset.filter;
     renderAll();
+  };
+});
+document.querySelectorAll('#marketFilters .chip').forEach(chip=>{
+  chip.onclick = () => {
+    document.querySelectorAll('#marketFilters .chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    activeMarketFilter = chip.dataset.filter;
+    renderList();
   };
 });
 leagueFilter.onchange = () => { activeLeagueFilter = leagueFilter.value; renderList(); };
@@ -474,6 +506,7 @@ function renderLeagueOptions(){
 function renderList(){
   let bets = periodBets();
   if (activeResultFilter !== 'All') bets = bets.filter(b=>b.result===activeResultFilter);
+  if (activeMarketFilter !== 'All') bets = bets.filter(b=>(b.market_type||'Other')===activeMarketFilter);
   if (activeLeagueFilter !== 'All') bets = bets.filter(b=>b.league===activeLeagueFilter);
 
   if (!bets.length){
@@ -491,7 +524,7 @@ function renderList(){
         <button class="badge ${b.result}" data-id="${b.id}" data-cur="${b.result}">${b.result}</button>
       </div>
       <div class="ticket-match">${escapeHtml(b.match||'')}</div>
-      <div class="ticket-market">${escapeHtml(b.market||'')}</div>
+      <div class="ticket-market">${escapeHtml(b.market||'')}${b.market_type ? ' · ' + MARKET_TYPE_LABELS[b.market_type] : ''}</div>
       <div class="ticket-bottom">
         <div class="odds">${Number(b.odds).toFixed(2)}</div>
         <div class="stake">${Number(b.unit_stake)}€ stake</div>
@@ -527,6 +560,7 @@ saveBtn.onclick = async () => {
     league: document.getElementById('f_league').value,
     match: document.getElementById('f_match').value,
     market: document.getElementById('f_market').value,
+    market_type: document.getElementById('f_market_type').value,
     odds: parseFloat(document.getElementById('f_odds').value),
     unit_stake: parseFloat(document.getElementById('f_stake').value) || 100,
     result: document.getElementById('f_result').value
