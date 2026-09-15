@@ -268,9 +268,15 @@
     <div class="field"><label>Date</label><input id="f_date" type="date"></div>
     <div class="field"><label>Odds</label><input id="f_odds" type="text" inputmode="decimal" placeholder="2.10 or 2,10"></div>
   </div>
-  <div class="field"><label>League</label><input id="f_league" type="text" placeholder="England Premier League"></div>
-  <div class="field"><label>Match</label><input id="f_match" type="text" placeholder="Arsenal vs Everton"></div>
-  <div class="field"><label>Market</label><input id="f_market" type="text" placeholder="Total Over (10.5) Corners"></div>
+  <div class="field"><label>League</label><input id="f_league" type="text" list="leagueList" placeholder="England Premier League"></div>
+  <div class="field-row">
+    <div class="field"><label>Home team</label><input id="f_team1" type="text" list="teamList" placeholder="Arsenal"></div>
+    <div class="field"><label>Away team</label><input id="f_team2" type="text" list="teamList" placeholder="Everton"></div>
+  </div>
+  <div class="field"><label>Market</label><input id="f_market" type="text" list="marketList" placeholder="Total Over (10.5) Corners"></div>
+  <datalist id="leagueList"></datalist>
+  <datalist id="teamList"></datalist>
+  <datalist id="marketList"></datalist>
   <div class="field"><label>Bet type</label>
     <select id="f_market_type">
       <option value="1H Goals">1st Half Goals</option>
@@ -377,7 +383,23 @@ async function loadBets(){
   if (error) { document.getElementById('subLabel').textContent = 'Failed to load — check Supabase config'; return; }
   allBets = data || [];
   buildPeriodOptions();
+  populateAutocomplete();
   renderAll();
+}
+
+function populateAutocomplete(){
+  const leagues = new Set(), teams = new Set(), markets = new Set();
+  allBets.forEach(b=>{
+    if (b.league) leagues.add(b.league);
+    if (b.market) markets.add(b.market);
+    if (b.match) b.match.split(' vs ').forEach(t => { if (t.trim()) teams.add(t.trim()); });
+  });
+  const fill = (id, set) => {
+    document.getElementById(id).innerHTML = [...set].sort().map(v=>`<option value="${escapeHtml(v)}">`).join('');
+  };
+  fill('leagueList', leagues);
+  fill('teamList', teams);
+  fill('marketList', markets);
 }
 
 function buildPeriodOptions(){
@@ -604,17 +626,19 @@ deleteBetBtn.onclick = async () => {
 saveBtn.onclick = async () => {
   const pin = document.getElementById('pin').value;
   if (pin !== ADMIN_PIN) { formStatus.textContent = 'Wrong PIN'; return; }
+  const team1 = document.getElementById('f_team1').value.trim();
+  const team2 = document.getElementById('f_team2').value.trim();
   const row = {
     date: document.getElementById('f_date').value,
     league: document.getElementById('f_league').value,
-    match: document.getElementById('f_match').value,
+    match: team1 && team2 ? `${team1} vs ${team2}` : '',
     market: document.getElementById('f_market').value,
     market_type: document.getElementById('f_market_type').value,
     odds: parseFloat(document.getElementById('f_odds').value.replace(',', '.')),
     unit_stake: parseFloat(document.getElementById('f_stake').value) || 100,
     result: document.getElementById('f_result').value
   };
-  if (!row.date || !row.match || !row.odds){ formStatus.textContent = 'Fill in date, match and odds'; return; }
+  if (!row.date || !row.match || !row.odds){ formStatus.textContent = 'Fill in date, both teams and odds'; return; }
   formStatus.textContent = 'Saving…';
   const { error } = await sb.from('bets').insert([row]);
   if (error) { formStatus.textContent = 'Save failed: ' + error.message; return; }
@@ -628,7 +652,8 @@ function resetForm(){
   document.getElementById('f_date').value = '';
   document.getElementById('f_odds').value = '';
   document.getElementById('f_league').value = '';
-  document.getElementById('f_match').value = '';
+  document.getElementById('f_team1').value = '';
+  document.getElementById('f_team2').value = '';
   document.getElementById('f_market').value = '';
   document.getElementById('f_market_type').value = '1H Goals';
   document.getElementById('f_stake').value = '100';
