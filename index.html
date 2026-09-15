@@ -235,6 +235,9 @@
     </div>
 
     <div class="league-select">
+      <select id="sportFilter"><option value="All">All sports</option></select>
+    </div>
+    <div class="league-select">
       <select id="leagueFilter"><option value="All">All leagues</option></select>
     </div>
 
@@ -268,12 +271,14 @@
     <div class="field"><label>Date</label><input id="f_date" type="date"></div>
     <div class="field"><label>Odds</label><input id="f_odds" type="text" inputmode="decimal" placeholder="2.10 or 2,10"></div>
   </div>
+  <div class="field"><label>Sport</label><input id="f_sport" type="text" list="sportList" value="Football" placeholder="Football"></div>
   <div class="field"><label>League</label><input id="f_league" type="text" list="leagueList" placeholder="England Premier League"></div>
   <div class="field-row">
     <div class="field"><label>Home team</label><input id="f_team1" type="text" list="teamList" placeholder="Arsenal"></div>
     <div class="field"><label>Away team</label><input id="f_team2" type="text" list="teamList" placeholder="Everton"></div>
   </div>
   <div class="field"><label>Market</label><input id="f_market" type="text" list="marketList" placeholder="Total Over (10.5) Corners"></div>
+  <datalist id="sportList"><option value="Football"><option value="Basketball"><option value="Ice Hockey"></datalist>
   <datalist id="leagueList"></datalist>
   <datalist id="teamList"></datalist>
   <datalist id="marketList"></datalist>
@@ -336,6 +341,7 @@ const cancelBtn = document.getElementById('cancelBtn');
 const saveBtn = document.getElementById('saveBtn');
 const formStatus = document.getElementById('formStatus');
 const leagueFilter = document.getElementById('leagueFilter');
+const sportFilter = document.getElementById('sportFilter');
 const periodSelect = document.getElementById('periodSelect');
 const marketFiltersEl = document.getElementById('marketFilters');
 const editBackdrop = document.getElementById('editBackdrop');
@@ -351,6 +357,7 @@ let allBets = [];
 let activeResultFilter = 'All';
 let activeMarketFilter = 'All';
 let activeLeagueFilter = 'All';
+let activeSportFilter = 'All';
 let activePeriod = 'month-' + new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0');
 
 function openSheet(){ backdrop.classList.add('open'); sheet.classList.add('open'); formStatus.textContent=''; }
@@ -376,6 +383,7 @@ document.querySelectorAll('#marketFilters .chip').forEach(chip=>{
   };
 });
 leagueFilter.onchange = () => { activeLeagueFilter = leagueFilter.value; renderList(); };
+sportFilter.onchange = () => { activeSportFilter = sportFilter.value; renderList(); };
 periodSelect.onchange = () => { activePeriod = periodSelect.value; renderAll(); };
 
 async function loadBets(){
@@ -388,10 +396,11 @@ async function loadBets(){
 }
 
 function populateAutocomplete(){
-  const leagues = new Set(), teams = new Set(), markets = new Set();
+  const leagues = new Set(), teams = new Set(), markets = new Set(), sports = new Set(['Football','Basketball','Ice Hockey']);
   allBets.forEach(b=>{
     if (b.league) leagues.add(b.league);
     if (b.market) markets.add(b.market);
+    if (b.sport) sports.add(b.sport);
     if (b.match) b.match.split(' vs ').forEach(t => { if (t.trim()) teams.add(t.trim()); });
   });
   const fill = (id, set) => {
@@ -400,6 +409,7 @@ function populateAutocomplete(){
   fill('leagueList', leagues);
   fill('teamList', teams);
   fill('marketList', markets);
+  fill('sportList', sports);
 }
 
 function buildPeriodOptions(){
@@ -456,8 +466,19 @@ function renderAll(){
   document.getElementById('subLabel').textContent = periodLabel() + ' · bet log & results';
   renderSummary();
   renderChart();
+  renderSportOptions();
   renderLeagueOptions();
   renderList();
+}
+
+function renderSportOptions(){
+  const bets = periodBets();
+  const sports = [...new Set(['Football','Basketball','Ice Hockey', ...bets.map(b=>b.sport).filter(Boolean)])].sort();
+  const current = sportFilter.value;
+  sportFilter.innerHTML = '<option value="All">All sports</option>' +
+    sports.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  activeSportFilter = sports.includes(current) ? current : 'All';
+  sportFilter.value = activeSportFilter;
 }
 
 function renderSummary(){
@@ -549,6 +570,7 @@ function renderList(){
   let bets = periodBets();
   if (activeResultFilter !== 'All') bets = bets.filter(b=>b.result===activeResultFilter);
   if (activeMarketFilter !== 'All') bets = bets.filter(b=>(b.market_type||'Other')===activeMarketFilter);
+  if (activeSportFilter !== 'All') bets = bets.filter(b=>b.sport===activeSportFilter);
   if (activeLeagueFilter !== 'All') bets = bets.filter(b=>b.league===activeLeagueFilter);
 
   if (!bets.length){
@@ -562,7 +584,7 @@ function renderList(){
   listEl.innerHTML = bets.map(b => `
     <div class="ticket">
       <div class="ticket-top">
-        <div><div class="ticket-date">${fmtDate(b.date)}</div><div class="ticket-league">${escapeHtml(b.league||'')}</div></div>
+        <div><div class="ticket-date">${fmtDate(b.date)}</div><div class="ticket-league">${b.sport ? escapeHtml(b.sport)+' · ' : ''}${escapeHtml(b.league||'')}</div></div>
         <button class="badge ${b.result}" data-id="${b.id}" data-cur="${b.result}">${b.result}</button>
       </div>
       <div class="ticket-match">${escapeHtml(b.match||'')}</div>
@@ -630,6 +652,7 @@ saveBtn.onclick = async () => {
   const team2 = document.getElementById('f_team2').value.trim();
   const row = {
     date: document.getElementById('f_date').value,
+    sport: document.getElementById('f_sport').value,
     league: document.getElementById('f_league').value,
     match: team1 && team2 ? `${team1} vs ${team2}` : '',
     market: document.getElementById('f_market').value,
@@ -651,6 +674,7 @@ function resetForm(){
   document.getElementById('pin').value = '';
   document.getElementById('f_date').value = '';
   document.getElementById('f_odds').value = '';
+  document.getElementById('f_sport').value = 'Football';
   document.getElementById('f_league').value = '';
   document.getElementById('f_team1').value = '';
   document.getElementById('f_team2').value = '';
