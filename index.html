@@ -258,14 +258,17 @@
     <button class="btn" style="background:rgba(139,149,163,0.18);color:var(--void);flex:1 1 45%;" data-result="Void">Void</button>
   </div>
   <div class="sheet-actions" style="margin-top:14px;">
-    <button class="btn btn-secondary" id="editCancelBtn">Cancel</button>
+    <button class="btn btn-secondary" id="editDetailsBtn">Edit details</button>
     <button class="btn" style="background:var(--loss);color:#fff;" id="deleteBetBtn">Delete bet</button>
+  </div>
+  <div class="sheet-actions" style="margin-top:10px;">
+    <button class="btn btn-secondary" id="editCancelBtn">Cancel</button>
   </div>
 </div>
 
 <div class="sheet-backdrop" id="backdrop"></div>
 <div class="sheet" id="sheet">
-  <h3>Add a bet</h3>
+  <h3 id="sheetTitle">Add a bet</h3>
   <div class="field"><label>Admin PIN</label><input id="pin" type="password" inputmode="numeric" placeholder="••••"></div>
   <div class="field-row">
     <div class="field"><label>Date</label><input id="f_date" type="date"></div>
@@ -348,7 +351,9 @@ const editBackdrop = document.getElementById('editBackdrop');
 const editSheet = document.getElementById('editSheet');
 const editCancelBtn = document.getElementById('editCancelBtn');
 const deleteBetBtn = document.getElementById('deleteBetBtn');
+const editDetailsBtn = document.getElementById('editDetailsBtn');
 let editingBetId = null;
+let editingBetRecord = null; // full bet object when editing details, null when adding new
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MARKET_TYPE_LABELS = {'1H Goals':'1st Half Goals','1H Corners':'1st Half Corners','FT Goals':'Full Match Goals','FT Corners':'Full Match Corners','Other':'Other'};
@@ -362,9 +367,9 @@ let activePeriod = 'month-' + new Date().getFullYear() + '-' + String(new Date()
 
 function openSheet(){ backdrop.classList.add('open'); sheet.classList.add('open'); formStatus.textContent=''; }
 function closeSheet(){ backdrop.classList.remove('open'); sheet.classList.remove('open'); }
-fab.onclick = openSheet;
+fab.onclick = () => { resetForm(); openSheet(); };
 cancelBtn.onclick = () => { resetForm(); closeSheet(); };
-backdrop.onclick = closeSheet;
+backdrop.onclick = () => { resetForm(); closeSheet(); };
 
 document.querySelectorAll('#resultFilters .chip').forEach(chip=>{
   chip.onclick = () => {
@@ -625,6 +630,32 @@ async function openResultPicker(id){
   openEditSheet(id);
 }
 
+editDetailsBtn.onclick = () => {
+  const bet = allBets.find(b => String(b.id) === String(editingBetId));
+  if (!bet) return;
+  closeEditSheet();
+  openFullEditForm(bet);
+};
+
+function openFullEditForm(bet){
+  editingBetRecord = bet;
+  document.getElementById('sheetTitle').textContent = 'Edit bet';
+  document.getElementById('pin').value = '';
+  document.getElementById('f_date').value = bet.date || '';
+  document.getElementById('f_odds').value = bet.odds != null ? bet.odds : '';
+  document.getElementById('f_sport').value = bet.sport || 'Football';
+  document.getElementById('f_league').value = bet.league || '';
+  const teams = (bet.match || '').split(' vs ');
+  document.getElementById('f_team1').value = teams[0] || '';
+  document.getElementById('f_team2').value = teams[1] || '';
+  document.getElementById('f_market').value = bet.market || '';
+  document.getElementById('f_market_type').value = bet.market_type || 'Other';
+  document.getElementById('f_stake').value = bet.unit_stake != null ? bet.unit_stake : 100;
+  document.getElementById('f_result').value = bet.result || 'Pending';
+  saveBtn.textContent = 'Save changes';
+  openSheet();
+}
+
 editSheet.querySelectorAll('[data-result]').forEach(btn=>{
   btn.onclick = async () => {
     if (!editingBetId) return;
@@ -662,8 +693,11 @@ saveBtn.onclick = async () => {
     result: document.getElementById('f_result').value
   };
   if (!row.date || !row.match || !row.odds){ formStatus.textContent = 'Fill in date, both teams and odds'; return; }
-  formStatus.textContent = 'Saving…';
-  const { error } = await sb.from('bets').insert([row]);
+  formStatus.textContent = editingBetRecord ? 'Saving changes…' : 'Saving…';
+  const query = editingBetRecord
+    ? sb.from('bets').update(row).eq('id', editingBetRecord.id)
+    : sb.from('bets').insert([row]);
+  const { error } = await query;
   if (error) { formStatus.textContent = 'Save failed: ' + error.message; return; }
   resetForm();
   closeSheet();
@@ -671,6 +705,9 @@ saveBtn.onclick = async () => {
 };
 
 function resetForm(){
+  editingBetRecord = null;
+  document.getElementById('sheetTitle').textContent = 'Add a bet';
+  saveBtn.textContent = 'Save bet';
   document.getElementById('pin').value = '';
   document.getElementById('f_date').value = '';
   document.getElementById('f_odds').value = '';
