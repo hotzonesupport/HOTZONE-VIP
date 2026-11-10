@@ -246,78 +246,13 @@
   </div>
 </div>
 
-<button class="fab" id="fabAdd">+</button>
-
-<div class="sheet-backdrop" id="editBackdrop"></div>
-<div class="sheet" id="editSheet">
-  <h3>Update bet</h3>
-  <div class="field-row" style="flex-wrap:wrap;">
-    <button class="btn" style="background:rgba(94,106,121,0.18);color:var(--pending);flex:1 1 45%;" data-result="Pending">Pending</button>
-    <button class="btn" style="background:rgba(63,169,106,0.18);color:var(--win);flex:1 1 45%;" data-result="Win">Win</button>
-    <button class="btn" style="background:rgba(214,90,90,0.18);color:var(--loss);flex:1 1 45%;" data-result="Loss">Loss</button>
-    <button class="btn" style="background:rgba(139,149,163,0.18);color:var(--void);flex:1 1 45%;" data-result="Void">Void</button>
-  </div>
-  <div class="sheet-actions" style="margin-top:14px;">
-    <button class="btn btn-secondary" id="editDetailsBtn">Edit details</button>
-    <button class="btn" style="background:var(--loss);color:#fff;" id="deleteBetBtn">Delete bet</button>
-  </div>
-  <div class="sheet-actions" style="margin-top:10px;">
-    <button class="btn btn-secondary" id="editCancelBtn">Cancel</button>
-  </div>
-</div>
-
-<div class="sheet-backdrop" id="backdrop"></div>
-<div class="sheet" id="sheet">
-  <h3 id="sheetTitle">Add a bet</h3>
-  <div class="field"><label>Admin PIN</label><input id="pin" type="password" inputmode="numeric" placeholder="••••"></div>
-  <div class="field-row">
-    <div class="field"><label>Date</label><input id="f_date" type="date"></div>
-    <div class="field"><label>Odds</label><input id="f_odds" type="text" inputmode="decimal" placeholder="2.10 or 2,10"></div>
-  </div>
-  <div class="field"><label>Sport</label><input id="f_sport" type="text" list="sportList" value="Football" placeholder="Football"></div>
-  <div class="field"><label>League</label><input id="f_league" type="text" list="leagueList" placeholder="England Premier League"></div>
-  <div class="field-row">
-    <div class="field"><label>Home team</label><input id="f_team1" type="text" list="teamList" placeholder="Arsenal"></div>
-    <div class="field"><label>Away team</label><input id="f_team2" type="text" list="teamList" placeholder="Everton"></div>
-  </div>
-  <div class="field"><label>Market</label><input id="f_market" type="text" list="marketList" placeholder="Total Over (10.5) Corners"></div>
-  <datalist id="sportList"><option value="Football"><option value="Basketball"><option value="Ice Hockey"></datalist>
-  <datalist id="leagueList"></datalist>
-  <datalist id="teamList"></datalist>
-  <datalist id="marketList"></datalist>
-  <div class="field"><label>Bet type</label>
-    <select id="f_market_type">
-      <option value="1H Goals">1st Half Goals</option>
-      <option value="1H Corners">1st Half Corners</option>
-      <option value="FT Goals">Full Match Goals</option>
-      <option value="FT Corners">Full Match Corners</option>
-      <option value="Other">Other</option>
-    </select>
-  </div>
-  <div class="field-row">
-    <div class="field"><label>Unit stake (€)</label><input id="f_stake" type="number" inputmode="numeric" value="100"></div>
-    <div class="field"><label>Result</label>
-      <select id="f_result">
-        <option value="Pending">Pending</option>
-        <option value="Win">Win</option>
-        <option value="Loss">Loss</option>
-        <option value="Void">Void</option>
-      </select>
-    </div>
-  </div>
-  <div class="sheet-actions">
-    <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-    <button class="btn btn-primary" id="saveBtn">Save bet</button>
-  </div>
-  <div class="status" id="formStatus"></div>
-</div>
 
 <script>
 /* ====== CONFIG ====== */
+// Read-only: bets are recorded by the Telegram bot, which writes with a server-side key.
 const BET_UNITS = 3; // every VIP bet is 3% of bankroll, so it counts as 3 units
 const SUPABASE_URL = "https://gpjptcijunflcaacnklt.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ehr2wgNQHzxkPMiRfEkB1w_cxPMgAkP";
-const ADMIN_PIN = "6969";
 const LOGO_URL = "logo.jpg"; // upload a square image with this filename to the repo to use your own logo
 /* ===================== */
 
@@ -338,23 +273,10 @@ if (tg) {
 })();
 
 const listEl = document.getElementById('ticketList');
-const fab = document.getElementById('fabAdd');
-const backdrop = document.getElementById('backdrop');
-const sheet = document.getElementById('sheet');
-const cancelBtn = document.getElementById('cancelBtn');
-const saveBtn = document.getElementById('saveBtn');
-const formStatus = document.getElementById('formStatus');
 const leagueFilter = document.getElementById('leagueFilter');
 const sportFilter = document.getElementById('sportFilter');
 const periodSelect = document.getElementById('periodSelect');
 const marketFiltersEl = document.getElementById('marketFilters');
-const editBackdrop = document.getElementById('editBackdrop');
-const editSheet = document.getElementById('editSheet');
-const editCancelBtn = document.getElementById('editCancelBtn');
-const deleteBetBtn = document.getElementById('deleteBetBtn');
-const editDetailsBtn = document.getElementById('editDetailsBtn');
-let editingBetId = null;
-let editingBetRecord = null; // full bet object when editing details, null when adding new
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MARKET_TYPE_LABELS = {'1H Goals':'1st Half Goals','1H Corners':'1st Half Corners','FT Goals':'Full Match Goals','FT Corners':'Full Match Corners','Other':'Other'};
@@ -366,11 +288,6 @@ let activeLeagueFilter = 'All';
 let activeSportFilter = 'All';
 let activePeriod = 'month-' + new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0');
 
-function openSheet(){ backdrop.classList.add('open'); sheet.classList.add('open'); formStatus.textContent=''; }
-function closeSheet(){ backdrop.classList.remove('open'); sheet.classList.remove('open'); }
-fab.onclick = () => { resetForm(); openSheet(); };
-cancelBtn.onclick = () => { resetForm(); closeSheet(); };
-backdrop.onclick = () => { resetForm(); closeSheet(); };
 
 document.querySelectorAll('#resultFilters .chip').forEach(chip=>{
   chip.onclick = () => {
@@ -397,25 +314,7 @@ async function loadBets(){
   if (error) { document.getElementById('subLabel').textContent = 'Failed to load — check Supabase config'; return; }
   allBets = data || [];
   buildPeriodOptions();
-  populateAutocomplete();
   renderAll();
-}
-
-function populateAutocomplete(){
-  const leagues = new Set(), teams = new Set(), markets = new Set(), sports = new Set(['Football','Basketball','Ice Hockey']);
-  allBets.forEach(b=>{
-    if (b.league) leagues.add(b.league);
-    if (b.market) markets.add(b.market);
-    if (b.sport) sports.add(b.sport);
-    if (b.match) b.match.split(' vs ').forEach(t => { if (t.trim()) teams.add(t.trim()); });
-  });
-  const fill = (id, set) => {
-    document.getElementById(id).innerHTML = [...set].sort().map(v=>`<option value="${escapeHtml(v)}">`).join('');
-  };
-  fill('leagueList', leagues);
-  fill('teamList', teams);
-  fill('marketList', markets);
-  fill('sportList', sports);
 }
 
 function buildPeriodOptions(){
@@ -591,7 +490,7 @@ function renderList(){
     <div class="ticket">
       <div class="ticket-top">
         <div><div class="ticket-date">${fmtDate(b.date)}</div><div class="ticket-league">${b.sport ? escapeHtml(b.sport)+' · ' : ''}${escapeHtml(b.league||'')}</div></div>
-        <button class="badge ${b.result}" data-id="${b.id}" data-cur="${b.result}">${b.result}</button>
+        <span class="badge ${b.result}">${b.result}</span>
       </div>
       <div class="ticket-match">${escapeHtml(b.match||'')}</div>
       <div class="ticket-market">${escapeHtml(b.market||'')}${b.market_type ? ' · ' + MARKET_TYPE_LABELS[b.market_type] : ''}</div>
@@ -601,9 +500,6 @@ function renderList(){
       </div>
     </div>`).join('');
 
-  document.querySelectorAll('.badge').forEach(btn=>{
-    btn.onclick = () => openResultPicker(btn.dataset.id);
-  });
 }
 
 function fmtDate(d){
@@ -611,116 +507,6 @@ function fmtDate(d){
   return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}).toUpperCase();
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-function openEditSheet(id){
-  editingBetId = id;
-  editBackdrop.classList.add('open');
-  editSheet.classList.add('open');
-}
-function closeEditSheet(){
-  editingBetId = null;
-  editBackdrop.classList.remove('open');
-  editSheet.classList.remove('open');
-}
-editCancelBtn.onclick = closeEditSheet;
-editBackdrop.onclick = closeEditSheet;
-
-async function openResultPicker(id){
-  const pin = prompt('Admin PIN to edit this bet:');
-  if (pin !== ADMIN_PIN) { if (pin !== null) alert('Wrong PIN'); return; }
-  openEditSheet(id);
-}
-
-editDetailsBtn.onclick = () => {
-  const bet = allBets.find(b => String(b.id) === String(editingBetId));
-  if (!bet) return;
-  closeEditSheet();
-  openFullEditForm(bet);
-};
-
-function openFullEditForm(bet){
-  editingBetRecord = bet;
-  document.getElementById('sheetTitle').textContent = 'Edit bet';
-  document.getElementById('pin').value = '';
-  document.getElementById('f_date').value = bet.date || '';
-  document.getElementById('f_odds').value = bet.odds != null ? bet.odds : '';
-  document.getElementById('f_sport').value = bet.sport || 'Football';
-  document.getElementById('f_league').value = bet.league || '';
-  const teams = (bet.match || '').split(' vs ');
-  document.getElementById('f_team1').value = teams[0] || '';
-  document.getElementById('f_team2').value = teams[1] || '';
-  document.getElementById('f_market').value = bet.market || '';
-  document.getElementById('f_market_type').value = bet.market_type || 'Other';
-  document.getElementById('f_stake').value = bet.unit_stake != null ? bet.unit_stake : 100;
-  document.getElementById('f_result').value = bet.result || 'Pending';
-  saveBtn.textContent = 'Save changes';
-  openSheet();
-}
-
-editSheet.querySelectorAll('[data-result]').forEach(btn=>{
-  btn.onclick = async () => {
-    if (!editingBetId) return;
-    const { error } = await sb.from('bets').update({ result: btn.dataset.result }).eq('id', editingBetId);
-    closeEditSheet();
-    if (error) { alert('Failed to update: ' + error.message); return; }
-    loadBets();
-  };
-});
-
-deleteBetBtn.onclick = async () => {
-  if (!editingBetId) return;
-  if (!confirm('Delete this bet? This cannot be undone.')) return;
-  const id = editingBetId;
-  const { error } = await sb.from('bets').delete().eq('id', id);
-  closeEditSheet();
-  if (error) { alert('Failed to delete: ' + error.message); return; }
-  loadBets();
-};
-
-saveBtn.onclick = async () => {
-  const pin = document.getElementById('pin').value;
-  if (pin !== ADMIN_PIN) { formStatus.textContent = 'Wrong PIN'; return; }
-  const team1 = document.getElementById('f_team1').value.trim();
-  const team2 = document.getElementById('f_team2').value.trim();
-  const row = {
-    date: document.getElementById('f_date').value,
-    sport: document.getElementById('f_sport').value,
-    league: document.getElementById('f_league').value,
-    match: team1 && team2 ? `${team1} vs ${team2}` : '',
-    market: document.getElementById('f_market').value,
-    market_type: document.getElementById('f_market_type').value,
-    odds: parseFloat(document.getElementById('f_odds').value.replace(',', '.')),
-    unit_stake: parseFloat(document.getElementById('f_stake').value) || 100,
-    result: document.getElementById('f_result').value
-  };
-  if (!row.date || !row.match || !row.odds){ formStatus.textContent = 'Fill in date, both teams and odds'; return; }
-  formStatus.textContent = editingBetRecord ? 'Saving changes…' : 'Saving…';
-  const query = editingBetRecord
-    ? sb.from('bets').update(row).eq('id', editingBetRecord.id)
-    : sb.from('bets').insert([row]);
-  const { error } = await query;
-  if (error) { formStatus.textContent = 'Save failed: ' + error.message; return; }
-  resetForm();
-  closeSheet();
-  loadBets();
-};
-
-function resetForm(){
-  editingBetRecord = null;
-  document.getElementById('sheetTitle').textContent = 'Add a bet';
-  saveBtn.textContent = 'Save bet';
-  document.getElementById('pin').value = '';
-  document.getElementById('f_date').value = '';
-  document.getElementById('f_odds').value = '';
-  document.getElementById('f_sport').value = 'Football';
-  document.getElementById('f_league').value = '';
-  document.getElementById('f_team1').value = '';
-  document.getElementById('f_team2').value = '';
-  document.getElementById('f_market').value = '';
-  document.getElementById('f_market_type').value = '1H Goals';
-  document.getElementById('f_stake').value = '100';
-  document.getElementById('f_result').value = 'Pending';
-}
 
 loadBets();
 </script>
